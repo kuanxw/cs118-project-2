@@ -1,5 +1,5 @@
-CC=gcc
-CPPFLAGS=-g -Wall
+CC=g++
+CPPFLAGS=-lsocket -lnsl -g -Wall
 USERID=004454718
 CLASSES=
 FILES=server.c Makefile README
