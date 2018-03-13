@@ -37,8 +37,6 @@ private:
     unsigned char flags = 0x00;  // ACK, FIN, FRAG, SYN
 };
 
-packet* packets[5];
-
 int window_size = 5120; // bytes, default value
 int RTO = 500; // retransmission timeout value
 
