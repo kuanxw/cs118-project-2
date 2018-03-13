@@ -16,10 +16,28 @@
 #define MAX_PACKET_LENGTH 1024; // 1024 bytes, inluding all headers
 #define MAX_SEQ_NUM 30720; // 30720 bytes, reset to 1 after it reaches 30Kbytes
 
-class header {
+#define ACK 0x08;
+#define FIN 0x04;
+#define FRAG 0x02;
+#define SYN 0x01;
+
+class packet_header {
 public:
-    unsigned short seq_num, ACK_num, ACK, FIN, FRAG, SYN, packet_size;
-}
+    unsigned short seq_num, ACK_num, data_length;
+    inline void set(int var) {
+                flags |= var;
+                return;
+    };
+    inline bool ack() {return flags & 0x08};
+    inline bool fin() {return flags & 0x04};
+    inline bool frag() {return flags & 0x02};
+    inline bool syn() {return flags & 0x01};
+
+private:
+    unsigned char flags = 0x00;  // ACK, FIN, FRAG, SYN
+};
+
+packet* packets[5];
 
 int window_size = 5120; // bytes, default value
 int RTO = 500; // retransmission timeout value
@@ -28,7 +46,7 @@ int sockfd, newsockfd, portno;
 
 void respond(){
     int n;
-    header request_header;
+    packet_header request_header;
     char in_buffer[1024];
     memset(in_buffer, 0, 1024);  // reset memory
 
@@ -43,20 +61,13 @@ void respond(){
     strncpy(&buf, in_buffer[2], 2);
     request_header.ACK_num = atoi(buf);
     strncpy(&buf, in_buffer[4], 2);
-    request_header.ACK = atoi(buf);
-    strncpy(&buf, in_buffer[6], 2);
-    request_header.FIN = atoi(buf);
-    strncpy(&buf, in_buffer[8], 2);j
-    request_header.FRAG = atoi(buf);
-    strncpy(&buf, in_buffer[10], 2);
-    request_header.SYN = atoi(buf);
-    strncpy(&buf, in_buffer[12], 2); // in bytes
-    request_header.packet_size = atoi(buf);
-   
-    int payload_size = request_header.packet_size - 14;
+    request_header.data_length = atoi(buf);
+    strncpy(&buf, in_buffer[6], 1);
+    request_header.set(atoi(buf));
+    
     char fn[1024];
     memset(fn, 0, 1024);  // reset memory
-    strncpy(fn, in_buffer[14], payload_size);
+    strncpy(fn, in_buffer[7], data_length);
 
     if((int fd = open(fn, O_RDONLY)) < 0) 
         error("Failed to open requested file\n");
@@ -71,6 +82,7 @@ void respond(){
     //Write file contents
     char* wrbuf = (char*) malloc(sizeof(char)*content_length);
     read(fd, wrbuf, content_length);
+    
     write(newsockfd, wrbuf, content_length);
     close(fd);
 }
